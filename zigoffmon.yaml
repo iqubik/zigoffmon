@@ -1,12 +1,11 @@
 blueprint:
-  name: 1.4_Offline detection for Z2M devices with last_seen
-  description: Regularly test all sensors with 'last_seen' in name and 'timestamp' device_class
-    ('last seen' Z2M sensors) to detect offline and if so execute an action.
+  name: 1.5_Offline detection for Z2M devices
+  description: Regularly test all Zigbee devices to detect offline and if so execute an action.
   domain: automation
   input:
     hours:
       name: Hours not seen
-      description: Sensors not seen this amount of time are assumed to be offline.
+      description: Devices not seen this amount of time are assumed to be offline.
       default: 24
       selector:
         number:
@@ -15,28 +14,9 @@ blueprint:
           unit_of_measurement: h
           mode: slider
           step: 1.0
-    time:
-      name: Time to test on
-      description: Test is run at configured time
-      default: '10:00:00'
-      selector:
-        time: {}
-    day:
-      name: Weekday to test on
-      description: 'Test is run at configured time either everyday (0) or on a given
-        weekday (1: Monday ... 7: Sunday)'
-      default: 0
-      selector:
-        number:
-          min: 0.0
-          max: 7.0
-          mode: slider
-          step: 1.0
     exclude:
-      name: Excluded Sensors
-      description: "'last seen' sensors (from devices that you want to exclude) to
-        exclude from detection. Only entities with 'last seen' in name and 'timestamp'
-        in device_class are supported, devices must be expanded!"
+      name: Excluded Devices
+      description: Devices that you want to exclude from detection.
       default:
         entity_id: []
       selector:
@@ -45,28 +25,33 @@ blueprint:
             domain: sensor
     actions:
       name: Actions
-      description: Notifications or similar to be run. {{sensors}} is replaced with
-        the names of sensors being offline.
+      description: Notifications or similar to be run for offline devices.
       selector:
         action: {}
   source_url: https://gist.github.com/Mr-Groch/bf073b142b507e3b6f8154223f81803b
 variables:
-  day: !input 'day'
   hours: !input 'hours'
   exclude: !input 'exclude'
-  sensors: "{% set result = namespace(sensors=[]) %}\
-    \ {% for state in states.sensor | rejectattr('attributes.device_class', 'undefined') | selectattr('attributes.device_class', '==', 'timestamp') %}\
-    \   {% if 'last_seen' in state.entity_id and not state.entity_id in exclude.entity_id and (states(state.entity_id) == 'unavailable' or ((as_timestamp(now()) - as_timestamp(states(state.entity_id))) > ((hours | int) * 60 * 60))) %}\
-    \     {% set result.sensors = result.sensors + [state.name | regex_replace(find=' last seen', replace='') ~ ' (' ~ relative_time(strptime(states(state.entity_id), '%Y-%m-%dT%H:%M:%S%z', 'unavailable')) ~ ')'] %}\
-    \   {% endif %}\
-    \ {% endfor %}\
-    \ {{ result.sensors | join(', ') }}"
+  devices: >
+    {% set result = namespace(devices=[]) %}
+    {% for state in states.sensor %}
+      {% if state.attributes.device_class and
+            state.state == 'unavailable' and
+            (as_timestamp(now()) - (state.last_updated | as_timestamp)) > (hours | int) * 3600 and
+            not state.entity_id in exclude.entity_id %}
+        {% set device_info = state.name ~ ' (' ~ state.entity_id ~ ')' %}
+        {% set result.devices = result.devices + [device_info] %}
+      {% endif %}
+    {% endfor %}
+    {{ result.devices | join(', ') }}
 trigger:
-- platform: time_pattern
-  minutes: /1
+  - platform: time_pattern
+    minutes: /1
 condition:
-- '{{ sensors != '''' and (day | int == 0 or day | int == now().isoweekday()) }}'
+  - condition: template
+    value_template: "{{ devices != '' }}"
 action:
-- choose: []
-  default: !input 'actions'
+  - service: notify.notify
+    data_template:
+      message: "The following Zigbee devices are offline: {{ devices }}"
 mode: restart
