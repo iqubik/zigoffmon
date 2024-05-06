@@ -1,19 +1,8 @@
 blueprint:
-  name: iq_Offline z2m LIGHT
+  name: 1.1_iq_Offline z2m LIGHT
   description: Test Lights Zigbee devices to detect offline
   domain: automation
   input:
-    hours:
-      name: Hours not seen
-      description: Devices not seen this amount of time are assumed to be offline.
-      default: 24
-      selector:
-        number:
-          min: 1.0
-          max: 168.0
-          unit_of_measurement: h
-          mode: slider
-          step: 1.0
     exclude:
       name: Excluded Devices
       description: Devices that you want to exclude from detection.
@@ -30,12 +19,12 @@ blueprint:
         action: {}
   source_url: https://gist.github.com/Mr-Groch/bf073b142b507e3b6f8154223f81803b
 variables:
-  hours: !input 'hours'
   exclude: !input 'exclude'
   devices: >
     {% set result = namespace(devices=[]) %}
     {% for state in states.light %}
-      {% if state.state == 'unavailable' %}
+      {% if state.state == 'unavailable' and
+            not state.entity_id in exclude.entity_id %}
         {% set device_info = state.name ~ ' (' ~ state.entity_id ~ ')' %}
         {% set result.devices = result.devices + [device_info] %}
       {% endif %}
