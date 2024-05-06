@@ -1,6 +1,6 @@
 blueprint:
-  name: offline zigbee/zwave/battery/smart plug devices
-  description: Works with Smart Plugs, ZWave, Zigbee etc (Works with ZHA & Z2M)
+  name: zigbee/zwave/battery/smart plug devices
+  description: for Smart Plugs, ZWave, Zigbee etc (Works with ZHA & Z2M)
   #By Tahutipai 2024-02-21
   #Originally Based on the work of Sybx @ https://community.home-assistant.io/t/low-battery-level-detection-notification-for-all-battery-sensors/258664
   #Note: This has been upgraded to report only the Device that is offline, not multiple individual sensors within one Device
