@@ -37,7 +37,6 @@ variables:
     {% for state in states.light %}
       {% if state.attributes.device_class and
             state.state == 'unavailable' and
-            (as_timestamp(now()) - (state.last_updated | as_timestamp)) > (hours | int) * 3600 and
             not state.entity_id in exclude.entity_id %}
         {% set device_info = state.name ~ ' (' ~ state.entity_id ~ ')' %}
         {% set result.devices = result.devices + [device_info] %}
