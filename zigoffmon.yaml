@@ -40,4 +40,4 @@ action:
   - service: notify.notify
     data_template:
       message: "The following Zigbee devices are offline: {{ devices }}"
-mode: restart
+mode: single
