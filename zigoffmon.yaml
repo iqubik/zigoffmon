@@ -1,21 +1,11 @@
 blueprint:
-  name: zigbee/zwave/battery/smart plug devices
-  description: for Smart Plugs, ZWave, Zigbee etc (Works with ZHA & Z2M)
+  name: Report offline zigbee/zwave/battery/smart plug devices
+  description: Works with Smart Plugs, ZWave, Zigbee etc (Works with ZHA & Z2M)
   #By Tahutipai 2024-02-21
   #Originally Based on the work of Sybx @ https://community.home-assistant.io/t/low-battery-level-detection-notification-for-all-battery-sensors/258664
   #Note: This has been upgraded to report only the Device that is offline, not multiple individual sensors within one Device
   domain: automation
   input:
-    interval:
-      name: Interval in minutes
-      description: Time interval in minutes to run the test
-      default: 60
-      selector:
-        number:
-          min: 1
-          max: 1440
-          mode: slider
-          step: 1
     day:
       name: Weekday to test on
       description: 'Test is run at configured time either everyday (0) or on a given
@@ -66,7 +56,7 @@ variables:
     {{result.offline_devices|sort|unique|join('\n')}}
 trigger:
 - platform: time_pattern
-  minutes: '/{{ interval }}'
+  minutes: /15
 condition:
 - '{{ offline_devices != '''' and (day | int == 0 or day | int == now().isoweekday()) }}'
 action:
