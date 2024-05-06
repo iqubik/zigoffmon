@@ -1,36 +1,28 @@
 blueprint:
-  name: Report repiodic offline zigbee/zwave/battery/smart plug devices
-  description: Can be configured to run on an hourly basis or any time pattern.
+  name: Report offline zigbee/zwave/battery/smart plug devices
+  description: Can be configured to run periodically based on a time pattern.
   domain: automation
   input:
-    time_pattern:
-      name: Time Pattern
-      description: Set time pattern for automation to trigger
-      default: 
-        hours: 1
-        minutes: 0
-        seconds: 0
+    time_pattern_hours:
+      name: Hourly Period
+      description: Trigger automation at every X hours
+      default: 1
       selector:
-        object:
-          properties:
-            hours:
-              type: integer
-              name: Hours
-              default: 1
-              minimum: 0
-            minutes:
-              type: integer
-              name: Minutes
-              default: 0
-              minimum: 0
-              maximum: 59
-            seconds:
-              type: integer
-              name: Seconds
-              default: 0
-              minimum: 0
-              maximum: 59
-              
+        number:
+          min: 0
+          max: 23
+          mode: slider
+          step: 1
+    time_pattern_minutes:
+      name: Minute Period
+      description: Trigger automation at every X minutes
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 59
+          mode: slider
+          step: 1
     exclude:
       name: Excluded Sensors
       description: Battery sensors to exclude from detection.
@@ -40,18 +32,17 @@ blueprint:
         target:
           entity:
           - device_class:
-            - battery
-            - switch
-            
+              - battery
+              - switch
     actions:
       name: Actions
-      description: The actions to perform. Offline devices will be listed.
+      description: Call your notification here. {{offline_devices}} will be replaced with the name of any offline devices
       selector:
         action: {}
-        
+
   source_url: https://gist.github.com/Tahutipai/971bf0e07e50ce6190e0dacd73262e2e
 
-# Your variable definitions remain the same...
+# Variable definitions here...
 variables:
   day: !input day
   exclude: !input exclude
@@ -71,9 +62,8 @@ variables:
 
 trigger:
   - platform: time_pattern
-    hours: !input 'time_pattern.hours'
-    minutes: !input 'time_pattern.minutes'
-    seconds: !input 'time_pattern.seconds'
+    hours: !input time_pattern_hours
+    minutes: !input time_pattern_minutes
 
 condition:
   - '{{ offline_devices != '''' }}'
