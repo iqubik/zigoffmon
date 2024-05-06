@@ -1,7 +1,9 @@
 blueprint:
-  name: Zigbee/ZWave battery device has gone offline
-  description: Report when a Zigbee or ZWave, or any battery device has gone offline
-  #based on the work of Sybx @ https://community.home-assistant.io/t/low-battery-level-detection-notification-for-all-battery-sensors/258664
+  name: Report offline zigbee/zwave/battery/smart plug devices
+  description: Works with Smart Plugs, ZWave, Zigbee etc (Works with ZHA & Z2M)
+  #By Tahutipai 2024-02-21
+  #Originally Based on the work of Sybx @ https://community.home-assistant.io/t/low-battery-level-detection-notification-for-all-battery-sensors/258664
+  #Note: This has been upgraded to report only the Device that is offline, not multiple individual sensors within one Device
   domain: automation
   input:
     interval:
@@ -16,7 +18,8 @@ blueprint:
           step: 1
     day:
       name: Weekday to test on
-      description: 'Test is run at the configured interval either everyday (0) or on a given weekday (1: Monday ... 7: Sunday)'
+      description: 'Test is run at configured time either everyday (0) or on a given
+        weekday (1: Monday ... 7: Sunday)'
       default: 0
       selector:
         number:
@@ -31,35 +34,42 @@ blueprint:
       selector:
         target:
           entity:
-            device_class: battery
-  actions:
-    name: Actions
-    description: Notifications or similar to be run. {{sensors}} is replaced with the names of sensors being low on battery.
-    selector:
-      action: {}
+            device_class:
+              - battery
+              - switch
+    actions:
+      name: Actions
+      description: Call your notification here. {{offline_devices}} will replaced with the name of any offline devices
+      selector:
+        action: {}
   source_url: https://gist.github.com/Tahutipai/971bf0e07e50ce6190e0dacd73262e2e
 variables:
   day: !input 'day'
   exclude: !input 'exclude'
-  sensors: >-
-    {% set result = namespace(sensors=[]) %}
-    {% for state in states.sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', '==', 'battery') %}
-    {% if "unavailable" in state | string and not state.entity_id in exclude.entity_id %}
-    {% set result.sensors = result.sensors + [state.name] %}
-    {% endif %}
+  offline_devices: >-
+    {% set result = namespace(offline_devices=[]) %}
+    {% for sensor in states.sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', '==', 'battery') %}
+      {% if "unavailable" in sensor | string  and not sensor.entity_id in exclude.entity_id %}
+        {% set result.offline_devices = result.offline_devices + [device_attr(device_id(sensor.entity_id), "name")] %}
+      {% endif %}
     {% endfor %}
-    {% for state in states.binary_sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', '==', 'battery') %}
-    {% if "unavailable" in state | string and not state.entity_id in exclude.entity_id %}
-    {% set result.sensors = result.sensors + [state.name] %}
-    {% endif %}
+    {% for binary_sensor in states.binary_sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', '==', 'battery') %}
+      {% if "unavailable" in binary_sensor | string and not binary_sensor.entity_id in exclude.entity_id %}
+        {% set result.offline_devices = result.offline_devices + [device_attr(device_id(binary_sensor.entity_id), "name")] %}
+      {% endif %}
     {% endfor %}
-    {{result.sensors|join(', ')}}
+    {% for switch in states.switch | selectattr('state','eq','unavailable') %}
+      {% if switch.entity_id not in exclude.entity_id %}
+        {% set result.offline_devices = result.offline_devices + [device_attr(device_id(switch.entity_id), "name")] %}
+      {% endif %}
+    {% endfor %}
+    {{result.offline_devices|sort|unique|join('\n')}}
 trigger:
-  - platform: time_pattern
-    minutes: '/{{ interval }}'
+- platform: time_pattern
+  minutes: '/{{ interval }}'
 condition:
-  - '{{ sensors != '' and (day | int == 0 or day | int == now().isoweekday()) }}'
+- '{{ offline_devices != '''' and (day | int == 0 or day | int == now().isoweekday()) }}'
 action:
-  - choose: []
-    default: !input 'actions'
+- choose: []
+  default: !input 'actions'
 mode: single
