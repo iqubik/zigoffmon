@@ -1,75 +1,69 @@
 blueprint:
-  name: Report offline zigbee/zwave/battery/smart plug devices
-  description: Can be configured to run periodically based on a time pattern.
+  name: Zigbee/ZWave устройство на батарейке отключилось
+  description: Сообщать, когда Zigbee, ZWave или любое другое устройство на батарейках отключается
   domain: automation
   input:
-    time_pattern_hours:
-      name: Hourly Period
-      description: Trigger automation at every X hours
-      default: 1
+    interval_minutes:
+      name: Интервал в минутах для запуска теста
+      description: Интервал для автоматического запуска теста в минутах
+      default: 60
       selector:
         number:
-          min: 0
-          max: 23
+          min: 1
+          max: 1439
           mode: slider
           step: 1
-    time_pattern_minutes:
-      name: Minute Period
-      description: Trigger automation at every X minutes
+    day:
+      name: День недели для запуска теста
+      description: ' Тест запускается в заданное время либо каждый день (0), либо в определенный день недели (1: понедельник ... 7: воскресенье) '
       default: 0
       selector:
         number:
           min: 0
-          max: 59
+          max: 7
           mode: slider
           step: 1
     exclude:
-      name: Excluded Sensors
-      description: Battery sensors to exclude from detection.
-      default:
-        entity_id: []
+      name: Исключенные сенсоры
+      description: Сенсоры батареи (например, смартфон), которые следует исключить из обнаружения. Поддерживаются только сущности, устройства должны быть раскрыты!
+      default: []
       selector:
         target:
           entity:
-          - device_class:
-              - battery
-              - switch
+            device_class: battery 
     actions:
-      name: Actions
-      description: Call your notification here. {{offline_devices}} will be replaced with the name of any offline devices
+      name: Действия
+      description: Уведомления или аналогичные действия, которые будут выполняться. {{sensors}} будет заменено на имена сенсоров с низким уровнем заряда.
       selector:
         action: {}
-
   source_url: https://gist.github.com/Tahutipai/971bf0e07e50ce6190e0dacd73262e2e
 
-# Variable definitions here...
 variables:
-  day: !input day
-  exclude: !input exclude
-  offline_devices: "{% set result = namespace(offline_devices=[]) %} {% for sensor
-    in states.sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class',
-    '==', 'battery') %}\n  {% if \"unavailable\" in sensor | string  and not sensor.entity_id
-    in exclude.entity_id %}\n    {% set result.offline_devices = result.offline_devices
-    + [device_attr(device_id(sensor.entity_id), \"name\")] %}\n  {% endif %}\n{% endfor
-    %} {% for binary_sensor in states.binary_sensor | selectattr('attributes.device_class',
-    'defined') | selectattr('attributes.device_class', '==', 'battery') %}\n  {% if
-    \"unavailable\" in binary_sensor | string and not binary_sensor.entity_id in exclude.entity_id
-    %}\n    {% set result.offline_devices = result.offline_devices + [device_attr(device_id(binary_sensor.entity_id),
-    \"name\")] %}\n  {% endif %}\n{% endfor %} {% for switch in states.switch | selectattr('state','eq','unavailable')
-    %}\n  {% if switch.entity_id not in exclude.entity_id %}\n    {% set result.offline_devices
-    = result.offline_devices + [device_attr(device_id(switch.entity_id), \"name\")]
-    %}\n  {% endif %}\n{% endfor %} {{result.offline_devices|sort|unique|join('\\n')}}"
+  day: !input 'day'
+  exclude: !input 'exclude'
+  sensors: >-
+    {% set result = namespace(sensors=[]) %}
+    {% for state in states.sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', '==', 'battery') %}
+      {% if "unavailable" in state | string and not state.entity_id in exclude.entity_id %}
+        {% set result.sensors = result.sensors + [state.name] %}
+      {% endif %}
+    {% endfor %}
+    {% for state in states.binary_sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', '==', 'battery') %}
+      {% if "unavailable" in state | string and not state.entity_id in exclude.entity_id %}
+        {% set result.sensors = result.sensors + [state.name] %}
+      {% endif %}
+    {% endfor %}
+    {{result.sensors|join(', ')}}
 
 trigger:
   - platform: time_pattern
-    hours: !input time_pattern_hours
-    minutes: !input time_pattern_minutes
+    minutes: '/{{ interval_minutes }}'
 
 condition:
-  - '{{ offline_devices != '''' }}'
+  - '{{ sensors != '''' and (day | int == 0 or day | int == now().isoweekday()) }}'
 
 action:
   - choose: []
-    default: !input actions
+    default: !input 'actions'
 
 mode: single
