@@ -1,5 +1,5 @@
 blueprint:
-  name: 1.6_Offline detection for Z2M devices
+  name: 1.7_Offline detection for Z2M devices
   description: Regularly test all Zigbee devices to detect offline and if so execute an action.
   domain: automation
   input:
@@ -22,7 +22,7 @@ blueprint:
       selector:
         target:
           entity:
-            domain: sensor
+            domain: light
     actions:
       name: Actions
       description: Notifications or similar to be run for offline devices.
