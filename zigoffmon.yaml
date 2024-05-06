@@ -1,5 +1,5 @@
 blueprint:
-  name: 1_Offline detection for Z2M devices with last_seen
+  name: 1.1_Offline detection for Z2M devices with last_seen
   description: Regularly test all sensors with 'last_seen' in name and 'timestamp'
     device_class ('last seen' Z2M sensors) to detect offline and if so execute an
     action.
@@ -16,12 +16,6 @@ blueprint:
           unit_of_measurement: h
           mode: slider
           step: 1.0
-    time:
-      name: Time to test on
-      description: Test is run at configured time
-      default: '10:00:00'
-      selector:
-        time: {}
     day:
       name: Weekday to test on
       description: 'Test is run at configured time either everyday (0) or on a given
@@ -66,8 +60,6 @@ variables:
     ''%Y-%m-%dT%H:%M:%S%z'', ''unavailable'')) ~ '')''] %}   {% endif %} {% endfor
     %} {{ result.sensors | join('', '') }}'
 trigger:
-- platform: time
-  at: !input time
 - platform: time_pattern
   minutes: /15
 condition:
