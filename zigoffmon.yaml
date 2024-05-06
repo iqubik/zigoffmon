@@ -34,8 +34,7 @@ blueprint:
         action: {}
   source_url: https://gist.github.com/Mr-Groch/bf073b142b507e3b6f8154223f81803b
 variables:
-  day: !input 'day'
-  hours: !input 'hours'
+  day: !input 'day'  
   exclude: !input 'exclude'
   sensors: "{% set result = namespace(sensors=[]) %}\
     \ {% for state in states.sensor | rejectattr('attributes.device_class', 'undefined') | selectattr('attributes.device_class', '==', 'timestamp') %}\
