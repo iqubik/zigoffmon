@@ -1,69 +1,65 @@
 blueprint:
-  name: Zigbee/ZWave устройство на батарейке отключилось
-  description: Сообщать, когда Zigbee, ZWave или любое другое устройство на батарейках отключается
+  name: Zigbee/ZWave battery device has gone offline
+  description: Report when a Zigbee or ZWave, or any battery device has gone offline
+  #based on the work of Sybx @ https://community.home-assistant.io/t/low-battery-level-detection-notification-for-all-battery-sensors/258664
   domain: automation
   input:
-    interval_minutes:
-      name: Интервал в минутах для запуска теста
-      description: Интервал для автоматического запуска теста в минутах
+    interval:
+      name: Interval in minutes
+      description: Time interval in minutes to run the test
       default: 60
       selector:
         number:
           min: 1
-          max: 1439
+          max: 1440
           mode: slider
           step: 1
     day:
-      name: День недели для запуска теста
-      description: ' Тест запускается в заданное время либо каждый день (0), либо в определенный день недели (1: понедельник ... 7: воскресенье) '
+      name: Weekday to test on
+      description: 'Test is run at the configured interval either everyday (0) or on a given weekday (1: Monday ... 7: Sunday)'
       default: 0
       selector:
         number:
-          min: 0
-          max: 7
+          min: 0.0
+          max: 7.0
           mode: slider
-          step: 1
+          step: 1.0
     exclude:
-      name: Исключенные сенсоры
-      description: Сенсоры батареи (например, смартфон), которые следует исключить из обнаружения. Поддерживаются только сущности, устройства должны быть раскрыты!
-      default: []
+      name: Excluded Sensors
+      description: Battery sensors (e.g. smartphone) to exclude from detection. Only entities are supported, devices must be expanded!
+      default: {entity_id: []}
       selector:
         target:
           entity:
-            device_class: battery 
-    actions:
-      name: Действия
-      description: Уведомления или аналогичные действия, которые будут выполняться. {{sensors}} будет заменено на имена сенсоров с низким уровнем заряда.
-      selector:
-        action: {}
+            device_class: battery
+  actions:
+    name: Actions
+    description: Notifications or similar to be run. {{sensors}} is replaced with the names of sensors being low on battery.
+    selector:
+      action: {}
   source_url: https://gist.github.com/Tahutipai/971bf0e07e50ce6190e0dacd73262e2e
-
 variables:
   day: !input 'day'
   exclude: !input 'exclude'
   sensors: >-
     {% set result = namespace(sensors=[]) %}
     {% for state in states.sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', '==', 'battery') %}
-      {% if "unavailable" in state | string and not state.entity_id in exclude.entity_id %}
-        {% set result.sensors = result.sensors + [state.name] %}
-      {% endif %}
+    {% if "unavailable" in state | string and not state.entity_id in exclude.entity_id %}
+    {% set result.sensors = result.sensors + [state.name] %}
+    {% endif %}
     {% endfor %}
     {% for state in states.binary_sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', '==', 'battery') %}
-      {% if "unavailable" in state | string and not state.entity_id in exclude.entity_id %}
-        {% set result.sensors = result.sensors + [state.name] %}
-      {% endif %}
+    {% if "unavailable" in state | string and not state.entity_id in exclude.entity_id %}
+    {% set result.sensors = result.sensors + [state.name] %}
+    {% endif %}
     {% endfor %}
     {{result.sensors|join(', ')}}
-
 trigger:
   - platform: time_pattern
-    minutes: '/{{ interval_minutes }}'
-
+    minutes: '/{{ interval }}'
 condition:
-  - '{{ sensors != '''' and (day | int == 0 or day | int == now().isoweekday()) }}'
-
+  - '{{ sensors != '' and (day | int == 0 or day | int == now().isoweekday()) }}'
 action:
   - choose: []
     default: !input 'actions'
-
 mode: single
