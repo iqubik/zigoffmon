@@ -4,6 +4,7 @@ blueprint:
     device_class ('last seen' Z2M sensors) to detect offline and if so execute an
     action.
   domain: automation
+   input:
     day:
       name: Weekday to test on
       description: 'Test is run at configured time either everyday (0) or on a given
