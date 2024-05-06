@@ -1,5 +1,5 @@
 blueprint:
-  name: Offline detection for Z2M devices with last_seen
+  name: 1_Offline detection for Z2M devices with last_seen
   description: Regularly test all sensors with 'last_seen' in name and 'timestamp'
     device_class ('last seen' Z2M sensors) to detect offline and if so execute an
     action.
@@ -75,6 +75,6 @@ condition:
 action:
 - choose: []
   default: !input actions
-mode: single
+mode: restart
 
 
