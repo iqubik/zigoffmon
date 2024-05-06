@@ -1,5 +1,5 @@
 blueprint:
-  name: 1.5_Offline detection for Z2M devices
+  name: 1.6_Offline detection for Z2M devices
   description: Regularly test all Zigbee devices to detect offline and if so execute an action.
   domain: automation
   input:
@@ -34,7 +34,7 @@ variables:
   exclude: !input 'exclude'
   devices: >
     {% set result = namespace(devices=[]) %}
-    {% for state in states.sensor %}
+    {% for state in states.light %}
       {% if state.attributes.device_class and
             state.state == 'unavailable' and
             (as_timestamp(now()) - (state.last_updated | as_timestamp)) > (hours | int) * 3600 and
